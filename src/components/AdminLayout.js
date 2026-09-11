@@ -12,6 +12,7 @@ import {
   FileBarChart,
   Wrench,
   Ticket,
+  Star,
   UserPlus,
   ChevronLeft,
   ChevronRight,
@@ -21,6 +22,8 @@ import {
   X,
   Sun,
   Moon,
+  Settings,
+  SlidersHorizontal,
 } from 'lucide-react';
 import useTheme from '../hooks/useTheme';
 import '../styles/tailwind.css';
@@ -129,6 +132,7 @@ export default function AdminLayout({ userName, onLogout, activeItem, title, sub
       <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-2 pb-4">
         <NavButton icon={Users} label="Employee Details" active={activeItem === 'dashboard'} collapsed={collapsed} onClick={() => go('/admin')} />
         <NavButton icon={CalendarDays} label="Leave Management" active={activeItem === 'leaves'} collapsed={collapsed} onClick={() => go('/admin/leaves')} />
+        <NavButton icon={SlidersHorizontal} label="Leave Settings" active={activeItem === 'leave-settings'} collapsed={collapsed} onClick={() => go('/admin/leave-settings')} />
 
         <div>
           <div className="flex items-center">
@@ -230,8 +234,10 @@ export default function AdminLayout({ userName, onLogout, activeItem, title, sub
         <NavButton icon={NotebookPen} label="HR Timesheets" active={activeItem === 'timesheets'} collapsed={collapsed} onClick={() => go('/admin/timesheets')} />
         <NavButton icon={Wallet} label="Payroll" active={activeItem === 'payroll'} collapsed={collapsed} onClick={() => go('/admin/payroll')} />
         <NavButton icon={FileBarChart} label="Payroll Report" active={activeItem === 'payroll-report'} collapsed={collapsed} onClick={() => go('/admin/payroll-report')} />
+        <NavButton icon={Settings} label="Payslip Settings" active={activeItem === 'payslip-settings'} collapsed={collapsed} onClick={() => go('/admin/payslip-settings')} />
         <NavButton icon={Wrench} label="Essentials" active={activeItem === 'essentials'} collapsed={collapsed} onClick={() => go('/admin/essentials')} />
         <NavButton icon={Ticket} label="Tickets" active={activeItem === 'tickets'} collapsed={collapsed} onClick={() => go('/admin/tickets')} />
+        <NavButton icon={Star} label="Performance Reports" active={activeItem === 'performance-reports'} collapsed={collapsed} onClick={() => go('/admin/performance-reports')} />
 
         <hr className="my-2 border-white/10" />
         <NavButton icon={UserPlus} label="Create Employee" active={false} collapsed={collapsed} onClick={() => go('/admin/employee/new')} />
