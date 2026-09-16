@@ -228,6 +228,12 @@ function EmployeeProfile({ userId, userRole, onLogout }) {
   };
 
   const handleSave = async () => {
+    if (isCreateMode && !(formData.employeeId || '').trim()) {
+      alert('Employee ID is required');
+      setActiveSection('personal');
+      return;
+    }
+
     setSaving(true);
     try {
       if (isCreateMode) {
@@ -342,6 +348,7 @@ function EmployeeProfile({ userId, userRole, onLogout }) {
           <div className="profile-section">
             <h2>Personal Details</h2>
             <div className="quick-info">
+              {F('Employee ID:', employee.employeeId)}
               {F('First Name:', employee.firstName)}
               {F('Last Name:', employee.lastName)}
               {F('Email:', employee.email)}
@@ -578,6 +585,19 @@ function EmployeeProfile({ userId, userRole, onLogout }) {
               <section className="profile-section">
                 <h2>Personal Details</h2>
                 <form className="profile-form">
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Employee ID *</label>
+                      <input
+                        type="text"
+                        name="employeeId"
+                        value={formData.employeeId || ''}
+                        onChange={handleInputChange}
+                        placeholder="Enter employee ID"
+                      />
+                    </div>
+                  </div>
+
                   <div className="form-row">
                     <div className="form-group">
                       <label>First Name *</label>
