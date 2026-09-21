@@ -8,6 +8,7 @@ const flattenEmployee = (employee) => {
 
   return {
     id: employee.empId ?? employee.id,
+    employeeId: employee.employeeId || '',
     firstName: employee.firstName || '',
     lastName: employee.lastName || '',
     email: employee.email || '',
@@ -153,6 +154,7 @@ const flattenEmployee = (employee) => {
 };
 
 const buildEmployeePayload = (profileData) => ({
+  employeeId: profileData.employeeId || null,
   firstName: profileData.firstName || null,
   lastName: profileData.lastName || null,
   email: profileData.email || null,
@@ -377,24 +379,41 @@ const mapFieldNameToDocType = (fieldName) => {
   return mapping[fieldName] || fieldName;
 };
 
+// Server validation failures (e.g. a duplicate Employee ID within the same client, HTTP 409)
+// come back as either {error: "..."} (GlobalExceptionHandler) or {success, message} (inline
+// controller checks) - axios's own thrown error only has a generic "Request failed with status
+// code 409" message, so callers need the real reason pulled out here instead.
+const extractErrorMessage = (error, fallbackMessage) => {
+  const data = error?.response?.data;
+  return data?.error || data?.message || fallbackMessage;
+};
+
 export const updateEmployeeProfile = async (userId, profileData) => {
   const payload = buildEmployeePayload(profileData);
-  const response = await axios.put(`${API_BASE_URL}/${userId}`, payload);
-  return {
-    success: true,
-    message: 'Profile updated successfully',
-    employee: flattenEmployee(response.data),
-  };
+  try {
+    const response = await axios.put(`${API_BASE_URL}/${userId}`, payload);
+    return {
+      success: true,
+      message: 'Profile updated successfully',
+      employee: flattenEmployee(response.data),
+    };
+  } catch (error) {
+    throw new Error(extractErrorMessage(error, 'Failed to update profile'));
+  }
 };
 
 export const createEmployee = async (profileData) => {
   const payload = buildEmployeePayload(profileData);
-  const response = await axios.post(API_BASE_URL, payload);
-  return {
-    success: true,
-    message: 'Employee created successfully',
-    employee: flattenEmployee(response.data),
-  };
+  try {
+    const response = await axios.post(API_BASE_URL, payload);
+    return {
+      success: true,
+      message: 'Employee created successfully',
+      employee: flattenEmployee(response.data),
+    };
+  } catch (error) {
+    throw new Error(extractErrorMessage(error, 'Failed to create employee'));
+  }
 };
 
 export const deleteEmployee = async (employeeId) => {
