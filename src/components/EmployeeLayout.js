@@ -22,15 +22,44 @@ import {
 } from 'lucide-react';
 import useIsProjectManager from '../hooks/useIsProjectManager';
 import useTheme from '../hooks/useTheme';
+import useCompanyName from '../hooks/useCompanyName';
+import usePolledCount from '../hooks/usePolledCount';
+import { getMyTickets, getUpdatedTicketIds, TICKETS_CHANGED_EVENT } from '../services/ticketService';
+import {
+  getEmployeeLeaveRequestsForBadge,
+  getUpdatedLeaveIds,
+  LEAVES_CHANGED_EVENT,
+} from '../services/leaveService';
 import '../styles/tailwind.css';
 
 const SIDEBAR_COLLAPSED_KEY = 'employee-sidebar-collapsed';
 
-function NavButton({ icon: Icon, label, active, collapsed, onClick }) {
+// The layout isn't passed the user id, so read it from the session App.js stores at login.
+const getLoggedInEmployeeId = () => {
+  try {
+    return JSON.parse(localStorage.getItem('user'))?.id ?? null;
+  } catch {
+    return null;
+  }
+};
+
+const fetchUpdatedTicketCount = async () => {
+  const tickets = await getMyTickets();
+  return getUpdatedTicketIds(Array.isArray(tickets) ? tickets : []).length;
+};
+
+const fetchUpdatedLeaveCount = async () => {
+  const employeeId = getLoggedInEmployeeId();
+  if (!employeeId) return 0;
+  return getUpdatedLeaveIds(await getEmployeeLeaveRequestsForBadge(employeeId)).length;
+};
+
+function NavButton({ icon: Icon, label, active, collapsed, onClick, badge = 0 }) {
+  const badgeText = badge > 99 ? '99+' : String(badge);
   return (
     <button
       type="button"
-      title={label}
+      title={badge > 0 ? `${label} (${badge} updated)` : label}
       onClick={onClick}
       className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
         active
@@ -38,8 +67,18 @@ function NavButton({ icon: Icon, label, active, collapsed, onClick }) {
           : 'text-employee-sidebar-muted hover:bg-employee-sidebar-accent/60 hover:text-white'
       }`}
     >
-      <Icon className="size-4 shrink-0" />
+      <span className="relative shrink-0">
+        <Icon className="size-4" />
+        {collapsed && badge > 0 && (
+          <span className="absolute -top-1 -right-1 size-2 rounded-full bg-red-500 ring-2 ring-employee-sidebar" />
+        )}
+      </span>
       {!collapsed && <span className="truncate">{label}</span>}
+      {!collapsed && badge > 0 && (
+        <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[11px] font-semibold leading-none text-white">
+          {badgeText}
+        </span>
+      )}
     </button>
   );
 }
@@ -57,6 +96,10 @@ function EmployeeLayout({ userName, onLogout, activeItem, title, subtitle, child
   const [mobileOpen, setMobileOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [theme, toggleTheme] = useTheme();
+  const companyName = useCompanyName();
+  // Sidebar badges: tickets and leave requests whose status the admin changed since last viewed.
+  const updatedTicketCount = usePolledCount(fetchUpdatedTicketCount, TICKETS_CHANGED_EVENT);
+  const updatedLeaveCount = usePolledCount(fetchUpdatedLeaveCount, LEAVES_CHANGED_EVENT);
 
   const handleLogout = () => {
     if (typeof onLogout === 'function') onLogout();
@@ -114,13 +157,13 @@ function EmployeeLayout({ userName, onLogout, activeItem, title, subtitle, child
             <NavButton icon={Home} label="Overview" active={activeItem === 'dashboard'} collapsed={collapsed} onClick={() => go('/employee')} />
             <NavButton icon={UserCircle} label="My Profile" active={activeItem === 'profile'} collapsed={collapsed} onClick={() => go('/employee/profile')} />
             <NavButton icon={CheckSquare} label="Attendance" active={activeItem === 'attendance'} collapsed={collapsed} onClick={() => go('/employee/attendance')} />
-            <NavButton icon={CalendarDays} label="Leave Requests" active={activeItem === 'leaves'} collapsed={collapsed} onClick={() => go('/employee/leaves')} />
+            <NavButton icon={CalendarDays} label="Leave Requests" active={activeItem === 'leaves'} collapsed={collapsed} onClick={() => go('/employee/leaves')} badge={updatedLeaveCount} />
             {isProjectManager && (
               <NavButton icon={Compass} label="My Team" active={activeItem === 'my-team'} collapsed={collapsed} onClick={() => go('/employee/my-team')} />
             )}
             <NavButton icon={NotebookPen} label="Daily Timesheet" active={activeItem === 'timesheet'} collapsed={collapsed} onClick={() => go('/employee/timesheet')} />
             <NavButton icon={PartyPopper} label="Holidays" active={activeItem === 'holidays'} collapsed={collapsed} onClick={() => go('/employee/holidays')} />
-            <NavButton icon={Ticket} label="Raise Ticket" active={activeItem === 'tickets'} collapsed={collapsed} onClick={() => go('/employee/tickets')} />
+            <NavButton icon={Ticket} label="Raise Ticket" active={activeItem === 'tickets'} collapsed={collapsed} onClick={() => go('/employee/tickets')} badge={updatedTicketCount} />
 
             <hr className="my-2 border-white/10" />
 
@@ -148,6 +191,14 @@ function EmployeeLayout({ userName, onLogout, activeItem, title, subtitle, child
               </button>
               <h1 className="text-base font-semibold tracking-tight text-foreground">Employee Portal</h1>
             </div>
+            {companyName && (
+              <div
+                className="pointer-events-none absolute left-1/2 hidden max-w-[40%] -translate-x-1/2 truncate text-lg font-bold tracking-tight text-foreground md:block"
+                title={companyName}
+              >
+                {companyName}
+              </div>
+            )}
             <div className="relative">
               <button
                 onClick={() => setMenuOpen((v) => !v)}

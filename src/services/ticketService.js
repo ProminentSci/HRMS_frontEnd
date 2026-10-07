@@ -1,4 +1,5 @@
 import { apiFetch } from '../utils/apiClient';
+import { createSeenStatusTracker } from '../utils/seenStatusTracker';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080';
 
@@ -19,6 +20,19 @@ export const getMyTickets = async () => {
   }
   return response.json();
 };
+
+// Fired after a ticket changes (admin update, or employee viewing updates) so sidebar badges
+// refresh without waiting for their poll.
+export const TICKETS_CHANGED_EVENT = 'tickets:changed';
+
+const ticketSeenTracker = createSeenStatusTracker({
+  storageKey: 'employee-ticket-seen',
+  initialStatus: 'Open',
+  changedEvent: TICKETS_CHANGED_EVENT,
+});
+
+export const getUpdatedTicketIds = ticketSeenTracker.getUpdatedIds;
+export const markTicketsSeen = ticketSeenTracker.markSeen;
 
 export const createTicket = async ({ subject, description }) => {
   const response = await apiFetch(`${API_BASE_URL}/api/tickets`, {
@@ -45,6 +59,17 @@ export const getClientTickets = async ({ page = 0, size = 15, status } = {}) => 
     throw new Error(await parseErrorMessage(response, 'Failed to load tickets'));
   }
   return response.json();
+};
+
+// Count of tickets not yet closed (Open + In Progress) - drives the sidebar notification badge.
+// The API filters by one status at a time, so each status is counted separately and summed.
+const ACTIVE_TICKET_STATUSES = ['Open', 'In Progress'];
+
+export const getOpenTicketCount = async () => {
+  const pages = await Promise.all(
+    ACTIVE_TICKET_STATUSES.map((status) => getClientTickets({ page: 0, size: 1, status }))
+  );
+  return pages.reduce((sum, data) => sum + (data.totalElements ?? 0), 0);
 };
 
 export const updateTicketStatus = async (ticketId, { status, adminResponse }) => {

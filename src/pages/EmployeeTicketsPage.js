@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { RefreshCw, Plus, X } from 'lucide-react';
 import EmployeeLayout from '../components/EmployeeLayout';
-import { getMyTickets, createTicket } from '../services/ticketService';
+import { getMyTickets, createTicket, getUpdatedTicketIds, markTicketsSeen } from '../services/ticketService';
 import '../styles/tailwind.css';
 
 const STATUS_CLASSES = {
@@ -18,12 +18,17 @@ function EmployeeTicketsPage({ userName, userId, onLogout }) {
   const [formData, setFormData] = useState({ subject: '', description: '' });
   const [submitting, setSubmitting] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [updatedIds, setUpdatedIds] = useState([]);
 
   const loadTickets = useCallback(async () => {
     setLoading(true);
     try {
       const data = await getMyTickets();
-      setTickets(Array.isArray(data) ? data : []);
+      const list = Array.isArray(data) ? data : [];
+      setTickets(list);
+      // Highlight what changed on this visit, then mark it seen so the sidebar badge clears.
+      setUpdatedIds(getUpdatedTicketIds(list));
+      markTicketsSeen(list);
       setError(null);
     } catch (err) {
       console.error('Failed to load tickets:', err);
@@ -113,7 +118,14 @@ function EmployeeTicketsPage({ userName, userId, onLogout }) {
                 return (
                   <li key={ticket.id} className="flex flex-col gap-2 px-5 py-4">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <h3 className="text-sm font-semibold text-foreground">{ticket.subject}</h3>
+                      <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                        {ticket.subject}
+                        {updatedIds.includes(ticket.id) && (
+                          <span className="inline-flex h-5 items-center rounded-full bg-red-500 px-2 text-[10px] font-semibold uppercase tracking-wide text-white">
+                            Updated
+                          </span>
+                        )}
+                      </h3>
                       <span
                         className={`inline-flex h-6 items-center rounded-full border px-2.5 text-[11px] font-semibold ${
                           STATUS_CLASSES[statusKey] || 'border-border bg-muted text-muted-foreground'
@@ -122,7 +134,7 @@ function EmployeeTicketsPage({ userName, userId, onLogout }) {
                         {ticket.status}
                       </span>
                     </div>
-                    <p className="text-sm text-muted-foreground">{ticket.description}</p>
+                    <p className="whitespace-pre-wrap break-words text-sm text-muted-foreground">{ticket.description}</p>
                     <div className="text-xs text-muted-foreground">Raised on {ticket.createdAt}</div>
                     {ticket.adminResponse && (
                       <div className="mt-1 rounded-lg bg-muted/50 px-3 py-2 text-sm text-foreground">

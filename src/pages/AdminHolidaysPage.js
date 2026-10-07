@@ -1,30 +1,16 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import '../styles/tailwind.css';
-import { getAllYears, getHolidays, createHoliday, deleteHoliday } from '../services/holidayService';
+import { getHolidays, createHoliday, deleteHoliday } from '../services/holidayService';
 import AdminLayout from '../components/AdminLayout';
-import HolidayCalendar from '../components/HolidayCalendar';
+import HolidayCalendar, { YEAR_OPTIONS } from '../components/HolidayCalendar';
 
 function AdminHolidaysPage({ userName, onLogout }) {
   const [year, setYear] = useState(new Date().getFullYear());
-  const [years, setYears] = useState([]);
   const [holidays, setHolidays] = useState([]);
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({ date: '', title: '', description: '' });
   const [calendarRefreshKey, setCalendarRefreshKey] = useState(0);
-
-  useEffect(() => {
-    const loadYears = async () => {
-      try {
-        const data = await getAllYears();
-        setYears(data.length ? data : [new Date().getFullYear()]);
-      } catch (err) {
-        console.error('Failed to load holiday years', err);
-        setYears([new Date().getFullYear()]);
-      }
-    };
-    loadYears();
-  }, []);
 
   const loadHolidays = useCallback(async () => {
     setLoading(true);
@@ -53,7 +39,6 @@ function AdminHolidaysPage({ userName, onLogout }) {
     try {
       const created = await createHoliday({ date: form.date, title: form.title, description: form.description });
       setHolidays((s) => [...s, created].sort((a, b) => new Date(a.date) - new Date(b.date)));
-      setYears((s) => Array.from(new Set([...s, new Date(form.date).getFullYear()])));
       setForm({ date: '', title: '', description: '' });
       setCalendarRefreshKey((k) => k + 1);
       alert('Holiday added');
@@ -85,13 +70,13 @@ function AdminHolidaysPage({ userName, onLogout }) {
             onChange={(e) => setYear(Number(e.target.value))}
             className="h-9 rounded-lg border border-border bg-white px-2.5 text-sm outline-none focus:border-client focus:ring-2 focus:ring-client/30"
           >
-            {Array.from(new Set([new Date().getFullYear(), ...(years || [])])).map((y) => (
+            {YEAR_OPTIONS.map((y) => (
               <option key={y} value={y}>{y}</option>
             ))}
           </select>
         </div>
 
-        <HolidayCalendar refreshKey={calendarRefreshKey} />
+        <HolidayCalendar refreshKey={calendarRefreshKey} focusYear={year} />
 
         <div className="rounded-xl border border-border/80 bg-card p-5 shadow-sm">
           <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-3">

@@ -26,6 +26,10 @@ import {
   SlidersHorizontal,
 } from 'lucide-react';
 import useTheme from '../hooks/useTheme';
+import useCompanyName from '../hooks/useCompanyName';
+import usePolledCount from '../hooks/usePolledCount';
+import { getOpenTicketCount, TICKETS_CHANGED_EVENT } from '../services/ticketService';
+import { getPendingLeaveCount, LEAVES_CHANGED_EVENT } from '../services/leaveService';
 import '../styles/tailwind.css';
 
 const SIDEBAR_COLLAPSED_KEY = 'admin-sidebar-collapsed';
@@ -38,11 +42,12 @@ const EMPLOYEE_REPORT_ITEMS = [
   { type: 'probation', label: 'Probation Period' },
 ];
 
-function NavButton({ icon: Icon, label, active, collapsed, onClick }) {
+function NavButton({ icon: Icon, label, active, collapsed, onClick, badge = 0 }) {
+  const badgeText = badge > 99 ? '99+' : String(badge);
   return (
     <button
       type="button"
-      title={label}
+      title={badge > 0 ? `${label} (${badge} pending)` : label}
       onClick={onClick}
       className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
         active
@@ -50,8 +55,18 @@ function NavButton({ icon: Icon, label, active, collapsed, onClick }) {
           : 'text-client-sidebar-muted hover:bg-client-sidebar-accent/60 hover:text-white'
       }`}
     >
-      <Icon className="size-4 shrink-0" />
+      <span className="relative shrink-0">
+        <Icon className="size-4" />
+        {collapsed && badge > 0 && (
+          <span className="absolute -top-1 -right-1 size-2 rounded-full bg-red-500 ring-2 ring-client-sidebar" />
+        )}
+      </span>
       {!collapsed && <span className="truncate">{label}</span>}
+      {!collapsed && badge > 0 && (
+        <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[11px] font-semibold leading-none text-white">
+          {badgeText}
+        </span>
+      )}
     </button>
   );
 }
@@ -70,8 +85,12 @@ export default function AdminLayout({ userName, onLogout, activeItem, title, sub
   const [mobileOpen, setMobileOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [theme, toggleTheme] = useTheme();
+  const companyName = useCompanyName();
   const [reportsOpen, setReportsOpen] = useState(activeItem === 'reports');
   const [employeeReportsOpen, setEmployeeReportsOpen] = useState(true);
+  // Sidebar badges: open / in-progress tickets and pending leave requests.
+  const openTicketCount = usePolledCount(getOpenTicketCount, TICKETS_CHANGED_EVENT);
+  const pendingLeaveCount = usePolledCount(getPendingLeaveCount, LEAVES_CHANGED_EVENT);
 
   useEffect(() => {
     if (activeItem === 'reports') {
@@ -131,7 +150,7 @@ export default function AdminLayout({ userName, onLogout, activeItem, title, sub
 
       <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-2 pb-4">
         <NavButton icon={Users} label="Employee Details" active={activeItem === 'dashboard'} collapsed={collapsed} onClick={() => go('/admin')} />
-        <NavButton icon={CalendarDays} label="Leave Management" active={activeItem === 'leaves'} collapsed={collapsed} onClick={() => go('/admin/leaves')} />
+        <NavButton icon={CalendarDays} label="Leave Management" active={activeItem === 'leaves'} collapsed={collapsed} onClick={() => go('/admin/leaves')} badge={pendingLeaveCount} />
         <NavButton icon={SlidersHorizontal} label="Leave Settings" active={activeItem === 'leave-settings'} collapsed={collapsed} onClick={() => go('/admin/leave-settings')} />
 
         <div>
@@ -236,7 +255,7 @@ export default function AdminLayout({ userName, onLogout, activeItem, title, sub
         <NavButton icon={FileBarChart} label="Payroll Report" active={activeItem === 'payroll-report'} collapsed={collapsed} onClick={() => go('/admin/payroll-report')} />
         <NavButton icon={Settings} label="Payslip Settings" active={activeItem === 'payslip-settings'} collapsed={collapsed} onClick={() => go('/admin/payslip-settings')} />
         <NavButton icon={Wrench} label="Essentials" active={activeItem === 'essentials'} collapsed={collapsed} onClick={() => go('/admin/essentials')} />
-        <NavButton icon={Ticket} label="Tickets" active={activeItem === 'tickets'} collapsed={collapsed} onClick={() => go('/admin/tickets')} />
+        <NavButton icon={Ticket} label="Tickets" active={activeItem === 'tickets'} collapsed={collapsed} onClick={() => go('/admin/tickets')} badge={openTicketCount} />
         <NavButton icon={Star} label="Performance Reports" active={activeItem === 'performance-reports'} collapsed={collapsed} onClick={() => go('/admin/performance-reports')} />
 
         <hr className="my-2 border-white/10" />
@@ -279,6 +298,14 @@ export default function AdminLayout({ userName, onLogout, activeItem, title, sub
                 {title || 'Client Admin Dashboard'}
               </h1>
             </div>
+            {companyName && (
+              <div
+                className="pointer-events-none absolute left-1/2 hidden max-w-[40%] -translate-x-1/2 truncate text-lg font-bold tracking-tight text-foreground md:block"
+                title={companyName}
+              >
+                {companyName}
+              </div>
+            )}
             <div className="relative">
               <button
                 onClick={() => setMenuOpen((v) => !v)}

@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import AdminLayout from '../components/AdminLayout';
 import Pagination from '../components/Pagination';
-import { getClientTickets, updateTicketStatus } from '../services/ticketService';
+import { getClientTickets, updateTicketStatus, TICKETS_CHANGED_EVENT } from '../services/ticketService';
 import '../styles/tailwind.css';
 
 const STATUS_OPTIONS = ['all', 'Open', 'In Progress', 'Resolved', 'Rejected'];
@@ -73,6 +73,7 @@ function AdminTicketsPage({ userName, onLogout }) {
       // match the active status filter, so it should drop out of the current page like it
       // would after a fresh fetch.
       await loadTickets();
+      window.dispatchEvent(new Event(TICKETS_CHANGED_EVENT));
     } catch (err) {
       console.error('Failed to update ticket:', err);
       alert(err.message || 'Failed to update ticket');
@@ -155,7 +156,7 @@ function AdminTicketsPage({ userName, onLogout }) {
                         {ticket.status}
                       </span>
                     </div>
-                    <p className="text-sm text-muted-foreground">{ticket.description}</p>
+                    <p className="whitespace-pre-wrap break-words text-sm text-muted-foreground">{ticket.description}</p>
 
                     <div className="flex flex-wrap items-end gap-3 rounded-lg bg-muted/40 p-3">
                       <div className="flex flex-col gap-1.5">

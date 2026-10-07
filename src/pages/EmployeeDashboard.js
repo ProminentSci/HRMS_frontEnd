@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { UserCircle, CheckSquare, CalendarDays, NotebookPen, FileText, Ticket } from 'lucide-react';
 import EmployeeLayout from '../components/EmployeeLayout';
+import BirthdayCard from '../components/BirthdayCard';
 import '../styles/tailwind.css';
 
 const CARDS = [
@@ -72,6 +73,8 @@ function EmployeeDashboard({ userName, userId, onLogout }) {
       subtitle="Quick access to your profile, attendance records, and leave requests."
     >
       <div className="flex flex-col gap-6">
+        <BirthdayCard />
+
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {CARDS.map((card) => {
             const Icon = card.icon;

@@ -1,5 +1,6 @@
 import { apiFetch } from '../utils/apiClient';
 import { LEAVE_TYPE_KEYS, normalizeLeaveTypeKey, normalizeLeaveBalances } from '../utils/leaveUtils';
+import { createSeenStatusTracker } from '../utils/seenStatusTracker';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080';
 
@@ -195,6 +196,38 @@ export const getLeaveRequestsPage = async ({ page = 1, size = 10, status = '', s
     totalPages: data.totalPages ?? 1,
   };
 };
+
+// ============= SIDEBAR BADGES =============
+
+// Fired after a leave request changes (admin decision, or employee viewing updates) so sidebar
+// badges refresh without waiting for their poll.
+export const LEAVES_CHANGED_EVENT = 'leaves:changed';
+
+// Admin badge: leave requests still awaiting a decision.
+export const getPendingLeaveCount = async () => {
+  const { total } = await getLeaveRequestsPage({ page: 1, size: 1, status: 'pending' });
+  return total ?? 0;
+};
+
+// Employee badge source: a plain server fetch, without the local-cache merging and writes that
+// getEmployeeLeaveRequests does - this runs on a timer from the sidebar.
+export const getEmployeeLeaveRequestsForBadge = async (employeeId) => {
+  const response = await apiFetch(`${API_BASE_URL}/api/leave-requests/employee/${employeeId}`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch employee leave requests');
+  }
+  const data = await response.json();
+  return Array.isArray(data) ? data : [];
+};
+
+const leaveSeenTracker = createSeenStatusTracker({
+  storageKey: 'employee-leave-seen',
+  initialStatus: 'Pending',
+  changedEvent: LEAVES_CHANGED_EVENT,
+});
+
+export const getUpdatedLeaveIds = leaveSeenTracker.getUpdatedIds;
+export const markLeavesSeen = leaveSeenTracker.markSeen;
 
 export const getEmployeeLeaveRequests = async (employeeId) => {
   try {
