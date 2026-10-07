@@ -80,9 +80,9 @@ function AdminReportsPage({ userName, onLogout }) {
       }
 
       if (employeeReportType === 'employment' && employmentFilter) {
-        const normalizedEmployment = String(employmentFilter || '').trim().toLowerCase();
-        if (normalizedEmployment !== 'all') {
-          params.employeeType = normalizedEmployment === 'full' ? 'Full Time' : 'Part Time';
+        const trimmedEmployment = String(employmentFilter || '').trim();
+        if (trimmedEmployment && trimmedEmployment.toLowerCase() !== 'all') {
+          params.employeeType = trimmedEmployment;
         }
       }
 
@@ -627,8 +627,10 @@ function AdminReportsPage({ userName, onLogout }) {
                 className="h-9 rounded-lg border border-border bg-white px-2.5 text-sm outline-none focus:border-client focus:ring-2 focus:ring-client/30"
               >
                 <option value="all">All</option>
-                <option value="full">Full Time</option>
-                <option value="part">Part Time</option>
+                <option value="Full Time">Full Time</option>
+                <option value="Part Time">Part Time</option>
+                <option value="Contract">Contract</option>
+                <option value="Temporary">Temporary</option>
               </select>
             </div>
           )}

@@ -7,7 +7,9 @@ import LeaveBalances from '../components/LeaveBalances';
 import { 
   getEmployeeLeaveRequests, 
   createLeaveRequest, 
-  getLeaveBalances 
+  getLeaveBalances,
+  getUpdatedLeaveIds,
+  markLeavesSeen
 } from '../services/leaveService';
 import { calculateDaysBetween, getTotalLeaveBalance, normalizeLeaveBalances } from '../utils/leaveUtils';
 import { RefreshCw } from 'lucide-react';
@@ -53,6 +55,7 @@ function EmployeeLeaveRequestPage({ userName, userId, onLogout }) {
     reason: ''
   });
   const [requests, setRequests] = useState([]);
+  const [updatedIds, setUpdatedIds] = useState([]);
   const [balances, setBalances] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -80,6 +83,9 @@ function EmployeeLeaveRequestPage({ userName, userId, onLogout }) {
     const sortedRequests = sortNewestRequestsFirst(requestsArray);
 
     setRequests(sortedRequests);
+    // Highlight decisions made since the last visit, then mark them seen so the sidebar badge clears.
+    setUpdatedIds(getUpdatedLeaveIds(sortedRequests));
+    markLeavesSeen(sortedRequests);
     setBalances(normalizeLeaveBalances(balancesData));
     setError(loadError || null);
     setLoading(false);
@@ -249,14 +255,14 @@ function EmployeeLeaveRequestPage({ userName, userId, onLogout }) {
                   ))}
                 </div>
 
-                <EmployeeRequestTable requests={requests} />
+                <EmployeeRequestTable requests={requests} updatedIds={updatedIds} />
               </>
             )}
 
             {activeTab === 'apply-leave' && (
               <>
                 <LeaveRequestForm formData={formData} onChange={handleFormChange} onSubmit={handleSubmit} />
-                <EmployeeRequestTable requests={requests} />
+                <EmployeeRequestTable requests={requests} updatedIds={updatedIds} />
               </>
             )}
           </>

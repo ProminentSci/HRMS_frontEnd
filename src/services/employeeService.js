@@ -348,6 +348,13 @@ export const getEmployeeById = async (employeeId) => {
 
 export const getEmployeeProfile = async (userId) => getEmployeeById(userId);
 
+// Name of the tenant company (Client) the given employee belongs to, or null if none.
+export const getEmployeeCompanyName = async (employeeId) => {
+  const response = await axios.get(`${API_BASE_URL}/${employeeId}`);
+  const name = response.data?.client?.companyName;
+  return typeof name === 'string' && name.trim() ? name.trim() : null;
+};
+
 export const uploadEmployeeDocument = async (employeeId, fieldName, file) => {
   const docType = mapFieldNameToDocType(fieldName);
   const formData = new FormData();

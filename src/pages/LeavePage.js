@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import AdminRequestTable from '../components/AdminRequestTable';
 import AdminLeaveReportCard from '../components/AdminLeaveReportCard';
 import AdminLayout from '../components/AdminLayout';
-import { getLeaveRequestsPage, updateLeaveRequestStatus } from '../services/leaveService';
+import { getLeaveRequestsPage, updateLeaveRequestStatus, LEAVES_CHANGED_EVENT } from '../services/leaveService';
 import '../styles/Dashboard.css';
 import '../styles/Leave.css';
 
@@ -53,6 +53,7 @@ function LeavePage({ userName, onLogout }) {
     try {
       await updateLeaveRequestStatus(requestId, status);
       await loadLeaveRequests(currentPage, statusFilter);
+      window.dispatchEvent(new Event(LEAVES_CHANGED_EVENT));
     } catch (err) {
       console.error('Failed to update leave request:', err);
       alert('Failed to update leave request');

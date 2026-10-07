@@ -9,19 +9,33 @@ const MONTH_NAMES = [
 ];
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
+export const MIN_YEAR = 2016;
+export const MAX_YEAR = 2040;
+export const YEAR_OPTIONS = Array.from({ length: MAX_YEAR - MIN_YEAR + 1 }, (_, i) => MIN_YEAR + i);
+
 const pad2 = (n) => String(n).padStart(2, '0');
 const toISODate = (y, m, d) => `${y}-${pad2(m + 1)}-${pad2(d)}`;
 
 // Self-contained Google-Calendar-style month grid: fetches its own data (one request per year,
 // re-used across that year's months) and manages its own prev/next/today navigation, so any page
 // can just drop in <HolidayCalendar /> without wiring up year state itself.
-export default function HolidayCalendar({ refreshKey = 0 } = {}) {
+export default function HolidayCalendar({ refreshKey = 0, focusYear } = {}) {
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth()); // 0-11
   const [holidays, setHolidays] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(null);
+
+  // Lets a parent (e.g. the admin page's year picker) jump the calendar to a given year - to the
+  // current month when that's this year, otherwise to January.
+  useEffect(() => {
+    if (!focusYear) return;
+    const now = new Date();
+    setSelectedDate(null);
+    setYear(focusYear);
+    setMonth(focusYear === now.getFullYear() ? now.getMonth() : 0);
+  }, [focusYear]);
 
   useEffect(() => {
     let cancelled = false;
@@ -47,6 +61,9 @@ export default function HolidayCalendar({ refreshKey = 0 } = {}) {
     setSelectedDate(null);
     if (month === 11) { setMonth(0); setYear((y) => y + 1); } else { setMonth((m) => m + 1); }
   };
+  const isFirstMonth = year <= MIN_YEAR && month === 0;
+  const isLastMonth = year >= MAX_YEAR && month === 11;
+
   const goToday = () => {
     setSelectedDate(null);
     const now = new Date();
@@ -79,14 +96,34 @@ export default function HolidayCalendar({ refreshKey = 0 } = {}) {
         <button
           type="button"
           onClick={goPrevMonth}
-          className="inline-flex items-center gap-1 rounded-lg border border-border bg-white px-2.5 py-1.5 text-sm font-medium text-foreground hover:bg-muted"
+          disabled={isFirstMonth}
+          className="inline-flex items-center gap-1 rounded-lg border border-border bg-white px-2.5 py-1.5 text-sm font-medium text-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
         >
           <ChevronLeft className="size-4" />
           Prev
         </button>
-        <h3 className="text-base font-semibold text-foreground">
-          {MONTH_NAMES[month]} {year}
-        </h3>
+        <div className="flex items-center gap-2">
+          <select
+            aria-label="Month"
+            value={month}
+            onChange={(e) => { setSelectedDate(null); setMonth(Number(e.target.value)); }}
+            className="h-8 rounded-lg border border-border bg-white px-2 text-sm font-semibold text-foreground outline-none focus:border-client focus:ring-2 focus:ring-client/30"
+          >
+            {MONTH_NAMES.map((name, i) => (
+              <option key={name} value={i}>{name}</option>
+            ))}
+          </select>
+          <select
+            aria-label="Year"
+            value={year}
+            onChange={(e) => { setSelectedDate(null); setYear(Number(e.target.value)); }}
+            className="h-8 rounded-lg border border-border bg-white px-2 text-sm font-semibold text-foreground outline-none focus:border-client focus:ring-2 focus:ring-client/30"
+          >
+            {(YEAR_OPTIONS.includes(year) ? YEAR_OPTIONS : [...YEAR_OPTIONS, year].sort((a, b) => a - b)).map((y) => (
+              <option key={y} value={y}>{y}</option>
+            ))}
+          </select>
+        </div>
         <div className="flex gap-2">
           <button
             type="button"
@@ -98,7 +135,8 @@ export default function HolidayCalendar({ refreshKey = 0 } = {}) {
           <button
             type="button"
             onClick={goNextMonth}
-            className="inline-flex items-center gap-1 rounded-lg border border-border bg-white px-2.5 py-1.5 text-sm font-medium text-foreground hover:bg-muted"
+            disabled={isLastMonth}
+            className="inline-flex items-center gap-1 rounded-lg border border-border bg-white px-2.5 py-1.5 text-sm font-medium text-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
           >
             Next
             <ChevronRight className="size-4" />

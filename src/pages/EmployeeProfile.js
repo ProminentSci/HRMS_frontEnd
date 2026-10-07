@@ -4,8 +4,32 @@ import EmployeeLayout from '../components/EmployeeLayout';
 import { createEmployee, getEmployeeProfile, getEmployeeById, updateEmployeeProfile, uploadEmployeeDocument } from '../services/employeeService';
 import { apiFetch } from '../utils/apiClient';
 import LeaveReportCard from '../components/LeaveReportCard';
+import useLocationOptions from '../hooks/useLocationOptions';
 import '../styles/Profile.css';
 import '../styles/Leave.css';
+
+// Dropdown options for a location field, keeping the saved value selectable even if it isn't in
+// the list (e.g. typed free-form before these fields became dropdowns).
+const renderLocationOptions = (options, value) => {
+  const list = value && !options.includes(value) ? [value, ...options] : options;
+  return list.map((name) => (
+    <option key={name} value={name}>
+      {name}
+    </option>
+  ));
+};
+
+// A Project Manager doesn't report to anyone on their own project, so the
+// project-manager field is left blank for them - both on the current project
+// and on each row of their project history - show their own name instead of
+// a blank field there.
+const getProjectManagerDisplay = (employee, managerName) => {
+  if (managerName) return managerName;
+  if (employee.positionLevel === 'PROJECT_MANAGER') {
+    return `${employee.firstName || ''} ${employee.lastName || ''}`.trim();
+  }
+  return '';
+};
 
 function EmployeeProfile({ userId, userRole, onLogout }) {
   const location = useLocation();
@@ -18,6 +42,7 @@ function EmployeeProfile({ userId, userRole, onLogout }) {
   const [isEditing, setIsEditing] = useState(isCreateMode);
   const [activeSection, setActiveSection] = useState('personal');
   const [formData, setFormData] = useState({});
+  const locationOptions = useLocationOptions(formData.country, formData.state);
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
@@ -88,6 +113,17 @@ function EmployeeProfile({ userId, userRole, onLogout }) {
     setFormData(prev => ({
       ...prev,
       [name]: value
+    }));
+  };
+
+  // Changing a parent location invalidates whatever was picked beneath it.
+  const handleLocationChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+      ...(name === 'country' && { state: '', city: '' }),
+      ...(name === 'state' && { city: '' }),
     }));
   };
 
@@ -401,7 +437,7 @@ function EmployeeProfile({ userId, userRole, onLogout }) {
             <div className="quick-info">
               {F('Work Status:', employee.workStatus || 'Bench')}
               {employee.workStatus === 'Project' && F('Current Project:', employee.currentProjectName)}
-              {employee.workStatus === 'Project' && F('Project Manager:', employee.currentProjectManager)}
+              {employee.workStatus === 'Project' && F('Project Manager:', getProjectManagerDisplay(employee, employee.currentProjectManager))}
               {employee.workStatus === 'Project' && F('Started On:', employee.currentProjectStartDate)}
             </div>
 
@@ -421,7 +457,7 @@ function EmployeeProfile({ userId, userRole, onLogout }) {
                     {employee.projectHistory.map((entry, index) => (
                       <tr key={entry.id || index}>
                         <td>{entry.projectName || '—'}</td>
-                        <td>{entry.projectManager || '—'}</td>
+                        <td>{getProjectManagerDisplay(employee, entry.projectManager) || '—'}</td>
                         <td>{entry.startDate || '—'}</td>
                         <td>{entry.endDate || 'Ongoing'}</td>
                       </tr>
@@ -790,36 +826,61 @@ function EmployeeProfile({ userId, userRole, onLogout }) {
                   <div className="form-row">
                     <div className="form-group">
                       <label>Country</label>
-                      <input
-                        type="text"
-                        name="country"
-                        value={formData.country || ''}
-                        onChange={handleInputChange}
-                        placeholder="Enter country"
-                      />
+                      <select name="country" value={formData.country || ''} onChange={handleLocationChange}>
+                        <option value="">Select country</option>
+                        {renderLocationOptions(locationOptions.countries, formData.country)}
+                      </select>
                     </div>
                     <div className="form-group">
                       <label>State</label>
-                      <input
-                        type="text"
-                        name="state"
-                        value={formData.state || ''}
-                        onChange={handleInputChange}
-                        placeholder="Enter state"
-                      />
+                      {locationOptions.stateMode === 'text' ? (
+                        <input
+                          type="text"
+                          name="state"
+                          value={formData.state || ''}
+                          onChange={handleLocationChange}
+                          placeholder="Enter state"
+                        />
+                      ) : (
+                        <select
+                          name="state"
+                          value={formData.state || ''}
+                          onChange={handleLocationChange}
+                          disabled={locationOptions.stateMode === 'disabled'}
+                        >
+                          <option value="">
+                            {locationOptions.stateMode === 'disabled' ? 'Select country first' : 'Select state'}
+                          </option>
+                          {renderLocationOptions(locationOptions.states, formData.state)}
+                        </select>
+                      )}
                     </div>
                   </div>
 
                   <div className="form-row">
                     <div className="form-group">
                       <label>City</label>
-                      <input
-                        type="text"
-                        name="city"
-                        value={formData.city || ''}
-                        onChange={handleInputChange}
-                        placeholder="Enter city"
-                      />
+                      {locationOptions.cityMode === 'text' ? (
+                        <input
+                          type="text"
+                          name="city"
+                          value={formData.city || ''}
+                          onChange={handleLocationChange}
+                          placeholder="Enter city"
+                        />
+                      ) : (
+                        <select
+                          name="city"
+                          value={formData.city || ''}
+                          onChange={handleLocationChange}
+                          disabled={locationOptions.cityMode === 'disabled'}
+                        >
+                          <option value="">
+                            {locationOptions.cityMode === 'disabled' ? 'Select state first' : 'Select city'}
+                          </option>
+                          {renderLocationOptions(locationOptions.cities, formData.city)}
+                        </select>
+                      )}
                     </div>
                     <div className="form-group">
                       <label>Pincode</label>

@@ -8,7 +8,7 @@ const STATUS_CLASSES = {
   rejected: 'border-[#fecaca] bg-[#fef2f2] text-[#b91c1c]',
 };
 
-export default function EmployeeRequestTable({ requests }) {
+export default function EmployeeRequestTable({ requests, updatedIds = [] }) {
   const getCorrectDays = (request) => {
     // Always calculate working days from dates to ensure consistency
     if (request.fromDate && request.toDate) {
@@ -58,6 +58,11 @@ export default function EmployeeRequestTable({ requests }) {
                       >
                         {request.status}
                       </span>
+                      {updatedIds.includes(request.id) && (
+                        <span className="ml-2 inline-flex h-5 items-center rounded-full bg-red-500 px-2 text-[10px] font-semibold uppercase tracking-wide text-white">
+                          Updated
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-sm text-muted-foreground">{formatDateDDMMYYYY(request.createdAt)}</td>
                   </tr>
